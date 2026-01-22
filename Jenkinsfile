@@ -25,11 +25,51 @@ pipeline {
             }
         }
 
+        stage('Python Security Scan (Bandit)') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                bandit -r . -f json -o bandit-report.json || true
+                '''
+            }
+        }
+
+        stage('SonarQube Scan') {
+            environment {
+                SONAR_SCANNER_HOME = tool 'SonarQubeScanner'
+            }
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh '''
+                    ${SONAR_SCANNER_HOME}/bin/sonar-scanner
+                    '''
+                }
+            }
+        }
+
+        stage('SonarQube Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh '''
                 docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
                 docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''
+                trivy image --severity HIGH,CRITICAL \
+                  --exit-code 1 \
+                  ${IMAGE_NAME}:${BUILD_NUMBER}
                 '''
             }
         }
@@ -63,10 +103,11 @@ pipeline {
 
     post {
         success {
-            echo "Application deployed to Kubernetes successfully!"
+            echo "Secure deployment completed successfully!"
         }
         failure {
-            echo "Deployment failed"
+            echo "Pipeline failed due to security or quality issues"
         }
     }
 }
+       
