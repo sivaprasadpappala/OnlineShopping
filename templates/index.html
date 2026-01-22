@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Products</h2>
+<ul>
+    {% for product in products %}
+    <li>
+        <b>{{ product.name }}</b> - ₹{{ product.price }}
+        <a href="/product/{{ product.id }}">View</a>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}
