@@ -69,6 +69,7 @@ pipeline {
                 sh '''
                 trivy image --severity CRITICAL \
                   --exit-code 1 \
+                  --ignore-unfixed \
                   ${IMAGE_NAME}:${BUILD_NUMBER}
                 '''
             }

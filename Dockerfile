@@ -1,7 +1,7 @@
 FROM python:3.11-alpine
 
 # Create non-root user
-RUN useradd -m appuser
+RUN adduser -D appuser
 
 WORKDIR /app
 
