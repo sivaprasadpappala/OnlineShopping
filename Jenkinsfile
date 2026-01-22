@@ -11,7 +11,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/online-shop.git'
+                git branch: 'main', url: 'https://github.com/sivaprasadpappala/OnlineShopping.git'
             }
         }
 
