@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: online-shop
-        image: dockerhub-username/online-shop:latest
+        image: sivaprasadpappala/online-shop:latest
         ports:
         - containerPort: 5000
