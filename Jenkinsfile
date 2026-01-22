@@ -2,45 +2,25 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "online-shop"
-        IMAGE_NAME = "online-shop:latest"
-        CONTAINER_NAME = "online-shop-container"
+        IMAGE_NAME = "dockerhub-username/online-shop"
+        K8S_NAMESPACE = "default"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/sivaprasadpappala/OnlineShopping.git'
+                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/online-shop.git'
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Install Dependencies') {
             steps {
                 sh '''
-                python3 --version
                 python3 -m venv venv
                 . venv/bin/activate
-                pip install --upgrade pip
                 pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Static Code Check') {
-            steps {
-                sh '''
-                . venv/bin/activate
-                python -m py_compile app.py models.py
-                '''
-            }
-        }
-
-        stage('Initialize Database') {
-            steps {
-                sh '''
-                . venv/bin/activate
-                python db_init.py
                 '''
             }
         }
@@ -48,26 +28,34 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                docker build -t ${IMAGE_NAME} .
+                docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
                 '''
             }
         }
 
-        stage('Stop Old Container') {
+        stage('Push Image') {
             steps {
-                sh '''
-                docker rm -f ${CONTAINER_NAME} || true
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    docker push ${IMAGE_NAME}:latest
+                    '''
+                }
             }
         }
 
-        stage('Run Application Container') {
+        stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                docker run -d \
-                  --name ${CONTAINER_NAME} \
-                  -p 5000:5000 \
-                  ${IMAGE_NAME}
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/service.yaml
+                kubectl rollout status deployment/online-shop
                 '''
             }
         }
@@ -75,10 +63,10 @@ pipeline {
 
     post {
         success {
-            echo "Application deployed successfully!"
+            echo "Application deployed to Kubernetes successfully!"
         }
         failure {
-            echo "Pipeline failed!"
+            echo "Deployment failed"
         }
     }
 }
