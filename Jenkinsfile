@@ -5,13 +5,15 @@ pipeline {
         IMAGE_NAME = "sivaprasadpappala/online-shop"
         K8S_NAMESPACE = "default"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
+        GITOPS_REPO = "https://github.com/sivaprasadpappala/OnlineShoppingGitops.git"
+        GITOPS_DIR  = "gitops"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout source') {
             steps {
-                git branch: 'main', url: 'https://github.com/sivaprasadpappala/OnlineShopping.git'
+                checkout scm
             }
         }
 
@@ -91,13 +93,27 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Update GitOps Repo') {
             steps {
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-                kubectl rollout status deployment/online-shop
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-creds',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                    git clone https://${GIT_USER}:${GIT_TOKEN}@https://github.com/sivaprasadpappala/OnlineShoppingGitops.git ${GITOPS_DIR}
+                    cd ${GITOPS_DIR}
+
+                    sed -i "s|IMAGE_TAG|${BUILD_NUMBER}|g" apps/online-shop/deployment.yaml
+
+                    git config user.email "jenkins@local"
+                    git config user.name "jenkins"
+
+                    git add .
+                    git commit -m "Update image to ${BUILD_NUMBER}"
+                    git push origin main
+                    '''
+                }
             }
         }
     }
