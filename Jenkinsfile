@@ -101,7 +101,7 @@ pipeline {
                     passwordVariable: 'GIT_TOKEN'
                 )]) {
                     sh '''
-                    git clone https://${GIT_USER}:${GIT_TOKEN}@https://github.com/sivaprasadpappala/OnlineShoppingGitops.git ${GITOPS_DIR}
+                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/sivaprasadpappala/OnlineShoppingGitops.git ${GITOPS_DIR}
                     cd ${GITOPS_DIR}
 
                     sed -i "s|IMAGE_TAG|${BUILD_NUMBER}|g" apps/online-shop/deployment.yaml
