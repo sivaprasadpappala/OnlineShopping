@@ -96,7 +96,7 @@ pipeline {
         stage('Update GitOps Repo') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'github-creds',
+                    credentialsId: 'GithubCredentials',
                     usernameVariable: 'GIT_USER',
                     passwordVariable: 'GIT_TOKEN'
                 )]) {
