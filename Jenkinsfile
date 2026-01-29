@@ -1,45 +1,27 @@
 pipeline {
-    agent {
-    kubernetes {
-      yaml """
-        apiVersion: v1
-        kind: Pod
-        spec:
-        containers:
-        - name: python
-            image: python:3.11
-            command: ['cat']
-            tty: true
-        """
-    }
-  }
+    agent any
 
     environment {
         IMAGE_NAME = "sivaprasadpappala/online-shop"
         K8S_NAMESPACE = "default"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
-        GITOPS_REPO = "https://github.com/sivaprasadpappala/OnlineShoppingGitops.git"
-        GITOPS_DIR  = "gitops"
     }
 
     stages {
 
-        stage('Checkout source') {
+        stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/sivaprasadpappala/OnlineShopping.git'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                container('python') {
                 sh '''
-                python --version
-                python -m venv venv
+                python3 -m venv venv
                 . venv/bin/activate
                 pip install -r requirements.txt
                 '''
-                }
             }
         }
 
@@ -109,27 +91,13 @@ pipeline {
             }
         }
 
-        stage('Update GitOps Repo') {
+        stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'GithubCredentials',
-                    usernameVariable: 'GIT_USER',
-                    passwordVariable: 'GIT_TOKEN'
-                )]) {
-                    sh '''
-                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/sivaprasadpappala/OnlineShoppingGitops.git ${GITOPS_DIR}
-                    cd ${GITOPS_DIR}
-
-                    sed -i "s|IMAGE_TAG|${BUILD_NUMBER}|g" apps/online-shop/deployment.yaml
-
-                    git config user.email "jenkins@local"
-                    git config user.name "jenkins"
-
-                    git add .
-                    git commit -m "Update image to ${BUILD_NUMBER}"
-                    git push origin main
-                    '''
-                }
+                sh '''
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/service.yaml
+                kubectl rollout status deployment/online-shop
+                '''
             }
         }
     }
@@ -143,4 +111,3 @@ pipeline {
         }
     }
 }
-       
