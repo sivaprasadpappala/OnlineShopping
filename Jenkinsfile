@@ -1,9 +1,18 @@
 pipeline {
     agent {
-        docker {
-            image 'python:3.11'
-        }
+    kubernetes {
+      yaml """
+        apiVersion: v1
+        kind: Pod
+        spec:
+        containers:
+        - name: python
+            image: python:3.11
+            command: ['cat']
+            tty: true
+        """
     }
+  }
 
     environment {
         IMAGE_NAME = "sivaprasadpappala/online-shop"
@@ -23,11 +32,14 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
+                container('python') {
                 sh '''
-                python3 -m venv venv
+                python --version
+                python -m venv venv
                 . venv/bin/activate
                 pip install -r requirements.txt
                 '''
+                }
             }
         }
 
