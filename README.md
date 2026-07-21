@@ -1,7 +1,3 @@
-I've generated a comprehensive README for the Online Shopping repository. However, I don't have write permissions to create the file directly in your repository. 
-
-Here's the generated README content you can copy and paste into a new `README.md` file:
-
 ```markdown
 # Online Shopping Application
 
